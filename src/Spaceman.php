@@ -79,7 +79,10 @@ final class Spaceman
      */
     private function resolveName($ast) : array
     {
-        $nameResolver = new NameResolver();
+        $nameResolver = new NameResolver(null, [
+            'preserveOriginalNames' => false,
+            'replaceNodes' => true,
+        ]);
         $nodeTraverser = new NodeTraverser;
         $nodeTraverser->addVisitor($nameResolver);
 
