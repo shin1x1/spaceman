@@ -24,7 +24,25 @@ class Convert
             throw new \RuntimeException($sourcePath);
         }
         $phpFiles = new PhpFileGenerator;
-        $spaceman = new Spaceman;
+
+
+        $names = new TargetNameCollection();
+
+        $collector = new TargetNameCollector($names);
+        foreach ($phpFiles($sourcePath) as $phpFile) {
+            /** @var \SplFileInfo $phpFile */
+            $namespace = $this->getNamespace($sourcePath, $phpFile);
+            $filePath = $phpFile->getRealPath();
+            $code = file_get_contents($filePath);
+            if (! is_string($code)) {
+                throw new \RuntimeException($filePath);
+            }
+            $collector($code, $namespace);
+        }
+
+        echo json_encode($names);
+
+        $spaceman = new Spaceman($names);
         foreach ($phpFiles($sourcePath) as $phpFile) {
             /** @var \SplFileInfo $phpFile */
             $namespace = $this->getNamespace($sourcePath, $phpFile);

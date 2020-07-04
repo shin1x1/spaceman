@@ -16,17 +16,30 @@ use PhpParser\PrettyPrinter\Standard;
 final class Spaceman
 {
     /**
+     * @var TargetNameCollection
+     */
+    private $names;
+
+    /**
+     * @param TargetNameCollection $names
+     */
+    public function __construct(TargetNameCollection $names)
+    {
+        $this->names = $names;
+    }
+
+    /**
      * return namespaced code
      */
-    public function __invoke(string $code, string $namespace) : string
+    public function __invoke(string $code, string $namespace): string
     {
         [$oldStmts, $oldTokens, $newStmts] = $this->getAstToken($code);
         if ($this->hasNamespace($oldStmts)) {
             return '';
         }
 
-        [$newStmts, $declareStmts, $useStmt] = $this->resolveName($newStmts);
-        $newStmts = $this->addNamespace($newStmts, $declareStmts, $useStmt, $namespace);
+        [$newStmts, $declareStmts, $useStmts] = $this->resolveName($newStmts, $namespace);
+        $newStmts = $this->addNamespace($newStmts, $declareStmts, $useStmts, $namespace);
         assert_options(ASSERT_ACTIVE, 0);
         $code = (new Standard)->printFormatPreserving($newStmts, $oldStmts, $oldTokens);
         assert_options(ASSERT_ACTIVE, 1);
@@ -34,7 +47,7 @@ final class Spaceman
         return $this->addPhpEol($code);
     }
 
-    private function getAstToken(string $code) : array
+    private function getAstToken(string $code): array
     {
         $lexer = new Emulative([
             'usedAttributes' => [
@@ -56,18 +69,17 @@ final class Spaceman
     /**
      * @return Node[]
      */
-    private function addNamespace(array $ast, array $declareStmts, Node\Stmt $useStmt, string $namespace) : array
+    private function addNamespace(array $ast, array $declareStmts, array $useStmts, string $namespace): array
     {
-        $nodes = count($declareStmts) > 0 ? $declareStmts : [];
+        $stmts = count($declareStmts) > 0 ? $declareStmts : [];
 
-        $nodes[] = (new BuilderFactory())->namespace($namespace)->getNode();
-        $nodes[] = $useStmt;
-        $nodes = array_merge($nodes, $ast);
+        $stmts[] = (new BuilderFactory())->namespace($namespace)->getNode();
+        $stmts = array_merge($stmts, $useStmts, $ast);
 
-        return $nodes;
+        return $stmts;
     }
 
-    private function hasNamespace(array $ast) : bool
+    private function hasNamespace(array $ast): bool
     {
         $traverser = new NodeTraverser();
         $NsCheckerVistor = new NsCheckerVisitor;
@@ -78,41 +90,26 @@ final class Spaceman
     }
 
     /**
-     * @return array{Node[], Node\Stmt\Declare_[], Node\Stmt}
+     * @return array{Node[], Node\Stmt\Declare_[], Node\Stmt\Use_[]}
      */
-    private function resolveName($ast) : array
+    private function resolveName($ast, string $namespace): array
     {
         $nameResolver = new NameResolver(null, [
             'preserveOriginalNames' => true,
-            'replaceNodes' => true,
+            'replaceNodes' => false,
         ]);
         $nodeTraverser = new NodeTraverser;
         $nodeTraverser->addVisitor($nameResolver);
-        $watchVisitor = new GlobalNameClassWatchVisitor;
-        $nodeTraverser->addVisitor($watchVisitor);
+        $useVisitor = new UseCollectVisitor($this->names);
+        $nodeTraverser->addVisitor($useVisitor);
         $declareVisitor = new DeclareCollectVisitor();
         $nodeTraverser->addVisitor($declareVisitor);
         $travesedAst = $nodeTraverser->traverse($ast);
 
-        $useStmt = $this->createUseStmt(array_unique($watchVisitor->globalClassNames));
-
-        return [$travesedAst, $declareVisitor->declares, $useStmt];
+        return [$travesedAst, $declareVisitor->declares, $useVisitor->uses->getUseStmts($namespace)];
     }
 
-    /**
-     * @return Node\Stmt\Nop|Node\Stmt\Use_
-     */
-    private function createUseStmt(array $globalClassNames) : Node\Stmt
-    {
-        $useUse = [];
-        foreach ($globalClassNames as $name) {
-            $useUse[] = new Node\Stmt\UseUse(new Node\Name($name));
-        }
-
-        return $useUse ? new Node\Stmt\Use_($useUse) : new Node\Stmt\Nop();
-    }
-
-    private function addPhpEol(string $code) : string
+    private function addPhpEol(string $code): string
     {
         if (substr($code, -1) !== "\n") {
             $code .= PHP_EOL;

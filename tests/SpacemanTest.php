@@ -15,7 +15,7 @@ class SpacemanTest extends TestCase
 
     protected function setUp() : void
     {
-        $this->spaceman = new Spaceman;
+        $this->spaceman = new Spaceman(new TargetNameCollection());
     }
 
     public function testIsInstanceOfSpaceman() : void
@@ -38,7 +38,8 @@ class SpacemanTest extends TestCase
 declare(strict_types=1);
 namespace Newname\Space;
 
-use Author, LogicException;
+use Author;
+use LogicException;
 use Foo\Bar;
 
 class Fake
@@ -46,7 +47,7 @@ class Fake
     public function run()
     {
         new Author;
-        new \Foo\Bar;
+        new Bar;
         new LogicException;
     }
 }
