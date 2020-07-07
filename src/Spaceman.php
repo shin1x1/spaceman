@@ -7,6 +7,7 @@ namespace Koriym\Spaceman;
 use PhpParser\BuilderFactory;
 use PhpParser\Lexer\Emulative;
 use PhpParser\Node;
+use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor;
 use PhpParser\NodeVisitor\NameResolver;
@@ -81,12 +82,8 @@ final class Spaceman
 
     private function hasNamespace(array $ast): bool
     {
-        $traverser = new NodeTraverser();
-        $NsCheckerVistor = new NsCheckerVisitor;
-        $traverser->addVisitor($NsCheckerVistor);
-        $traverser->traverse($ast);
-
-        return $NsCheckerVistor->hasNamespace;
+        $finder = new NodeFinder();
+        return $finder->findFirstInstanceOf($ast, Node\Stmt\Namespace_::class) !== null;
     }
 
     /**

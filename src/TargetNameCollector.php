@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Koriym\Spaceman;
 
 use PhpParser\Node;
+use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor;
 use PhpParser\ParserFactory;
@@ -43,18 +44,10 @@ final class TargetNameCollector
         return $parser->parse($code);
     }
 
-    /**
-     * @param Node\Stmt[] $stmts
-     * @return bool
-     */
-    private function hasNamespace(array $stmts): bool
+    private function hasNamespace(array $ast): bool
     {
-        $traverser = new NodeTraverser();
-        $NsCheckerVisitor = new NsCheckerVisitor;
-        $traverser->addVisitor($NsCheckerVisitor);
-        $traverser->traverse($stmts);
-
-        return $NsCheckerVisitor->hasNamespace;
+        $finder = new NodeFinder();
+        return $finder->findFirstInstanceOf($ast, Node\Stmt\Namespace_::class) !== null;
     }
 
     /**
