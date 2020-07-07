@@ -2,6 +2,15 @@
 declare(strict_types=1);
 
 final class BaseClass {}
+final class ConstVarClass {
+    public const CONST_VAR = 1;
+}
+final class StaticCallClass {
+    public static function staticMethod() {}
+}
+final class StaticVarClass {
+    public static $VAR1 = 'abc';
+}
 
 interface BaseInterface {}
 trait BaseTrait {}

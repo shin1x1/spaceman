@@ -18,7 +18,11 @@ final class Foo extends BaseClass implements BaseInterface
 
         var_dump(DEFINED_VAR);
         Hoge::class;
-        
+
+        StaticCallClass::staticMethod();
+        var_dump(StaticVarClass::$VAR1);
+        var_dump(ConstVarClass::CONST_VAR);
+
         new Bar();
     }
 }
